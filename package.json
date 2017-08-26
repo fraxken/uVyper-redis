@@ -4,7 +4,7 @@
   "description": "uVyper redis adapter",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "node test.js"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,6 @@
   },
   "dependencies": {
     "redis": "^2.8.0",
-    "uvyper": "^1.5.0"
+    "uvyper": "^1.5.4"
   }
 }
