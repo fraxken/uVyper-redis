@@ -1,12 +1,14 @@
 const {Server,Message} = require('uvyper');
 const Adapter = require('./index.js');
+const chalk = require('chalk');
 
 const WSServer = new Server({port: 3000});
 WSServer.setAdapter(new Adapter());
 WSServer.on('connection',function(socket) {
-    console.log(`Socket ${socket.id} connected!`);
+    console.log(`Socket ${chalk.green.bold(socket.id)} connected on Server ${chalk.magenta.bold(WSServer.id)}!`);
     try {
-        new Message('test',{msg: 'hello world!'}).publish('socket-id');
+        console.log(`${WSServer.id}:: broadcast test event!`);
+        new Message('test',{msg: 'hello world!'}).publish(WSServer);
     }
     catch(E) {
         console.error(E);
@@ -16,9 +18,3 @@ WSServer.on('connection',function(socket) {
         console.log(`Socket ${socket.id} disconnected!`);
     });
 });
-
-WSServer.on('error',function() {
-    console.error('Failed to start uVyper server...');
-});
-
-console.log('Socket server started...');

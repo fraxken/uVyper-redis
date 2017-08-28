@@ -2,12 +2,13 @@
 const uVyper = require('uvyper');
 const redis = require('redis');
 const events = require('events');
+const { red, yellow, cyan, magenta , green } = require('chalk');
 
 /*
  * @interface IAdapterConstructor
  */
 const IAdapterConstructor = {
-    redisPort: 67188
+    redisPort: 6379
 };
 
 /*
@@ -16,7 +17,6 @@ const IAdapterConstructor = {
  * 
  * @property {redis.Client} sub
  * @property {redis.Client} pub
- * @property {String} serverId;
  */
 class Adapter extends events {
 
@@ -25,11 +25,9 @@ class Adapter extends events {
      */
     constructor(IOptions = {}) {
         super();
-        IOptions = Object.assign(IOptions,{},IAdapterConstructor);
-        console.log(IOptions);
+        IOptions = Object.assign(IAdapterConstructor,IOptions);
         this.sub = redis.createClient();
         this.pub = redis.createClient();
-        console.log('Adapter created...');
     }
 
     /*
@@ -42,8 +40,7 @@ class Adapter extends events {
             throw new TypeError('Server should by typeof uVyper.Server');
         }
 
-        console.log('Initialize Adapter for server id => '+Server.id);
-        this.serverId = Server.id;
+        console.log('Initialize Adapter for server id => '+yellow.bold(Server.id));
 
         // Subscribe to message channel
         this.sub.subscribe('message');
@@ -53,42 +50,70 @@ class Adapter extends events {
          */
         this.sub.on('message',function(channel,messageStr) {
             if(channel !== 'message') return;
-            console.log('Subscriber message triggered');
+            console.log('------------------');
+            console.log('Subscriber message triggered on Server => '+yellow.bold(Server.id));
+
             try {
-                var { serverId, event, data, source } = JSON.parse(messageStr);
+                var { serverId, event, data, source, source_id } = JSON.parse(messageStr);
+                if(serverId === Server.id) {
+                    console.log(magenta.bold('Server id is the same... Skip message!'));
+                    return;
+                }
             }
             catch(E) {
-                console.log('Failed to parse message...');
+                console.log(red.bold('Failed to parse message...'));
                 console.error(E);
                 return;
             }
-            console.log(serverId);
-            console.log(event);
-            console.log(data);
-            console.log(source);
+
+            console.log(`eventName: ${cyan.bold(event)}`);
+            console.log(`source: ${green.bold(source)}`);
+            console.log(`source_id: ${green.bold(source_id)}`);
+
+            // Switch en source value
+            switch(source) {
+                case 'Socket':
+                    console.log('Socket source matched!');
+                    if(Server.sockets.has(source_id) === true) {
+                        new uVyper.Message(event,data).off().publish(Server.sockets.get(source_id));
+                    }
+                break;
+                case 'Server': 
+                    new uVyper.Message(event,data).off().publish(Server);
+                break;
+                case 'Room': 
+                    console.log('Room source matched!');
+                    if(Events.rooms.has(source_id) === true) {
+                        new uVyper.Message(event,data).off().publish(Events.rooms.get(source_id));
+                    }
+                break;
+                default:
+                    console.log('Unknow source...');
+                break;
+            }
         });
 
         /* 
          * Catch all messages triggered by the WebSocket server!
          */
-        Events.on('message',({event,data,source}) => {
-            console.log('message triggered!');
+        Events.on('message',({event,data,source,source_id}) => {
+            console.log('------------------');
+            console.log('Events message triggered on Server => '+yellow.bold(Server.id));
 
-            // Convert source if needed...
-            if(source instanceof uVyper.Server === true) {
-                source = 'Server';
+            if('undefined' === typeof(source_id)) {
+                source_id = Server.id;
             }
-            else if(source instanceof uVyper.Room === true) {
-                source = 'Room';
-            }
-            console.log(event,source);
+            console.log(`eventName: ${cyan.bold(event)}`);
+            console.log(`source: ${green.bold(source)}`);
+            console.log(`source_id: ${green.bold(source_id)}`);
 
             try {
                 this.pub.publish('message',JSON.stringify({
-                    serverId: this.serverId,
+                    serverId: Server.id,
                     event,
                     data,
-                    source 
+                    source,
+                    source_id 
                 }));
             }
             catch(E) {
