@@ -26,6 +26,6 @@
   },
   "dependencies": {
     "redis": "^2.8.0",
-    "uvyper": "^1.5.4"
+    "uvyper": "^1.7.4"
   }
 }

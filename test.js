@@ -5,9 +5,16 @@ const WSServer = new Server({port: 3000});
 WSServer.setAdapter(new Adapter());
 WSServer.on('connection',function(socket) {
     console.log(`Socket ${socket.id} connected!`);
-    new Message('test',{msg: 'hello world!'})
-        .publish(socket)
-        .catch( E => console.error(E) );
+    try {
+        new Message('test',{msg: 'hello world!'}).publish('socket-id');
+    }
+    catch(E) {
+        console.error(E);
+    }
+
+    socket.on('close',function() {
+        console.log(`Socket ${socket.id} disconnected!`);
+    });
 });
 
 WSServer.on('error',function() {
